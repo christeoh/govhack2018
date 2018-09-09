@@ -1,0 +1,195 @@
+curl http://stat.abs.gov.au/itt/r.jsp\?RegionSummary\&region\=10102\&dataset\=ABS_REGIONAL_ASGS2016\&geoconcept\=ASGS_2016\&measure\=MEASURE\&datasetASGS\=ABS_REGIONAL_ASGS2016\&datasetLGA\=ABS_REGIONAL_LGA2017\&regionLGA\=LGA_2017\&regionASGS\=ASGS_2016 | grep -A 2 "Unemployment rate" |tail -n 1 | sed -e 's/<td>//g' | sed -e 's/<\/td>//g'
+
+for i in `cat sa3id.csv| awk -F, '{print $1}'`
+do
+	sa3id=$(echo $i | awk -F= '{print $2}' | awk -F'&' '{print $1}')
+	scrape=$(curl $i)
+	name=$(echo $scrape | grep "='geography" | awk -F'(' '{print $1}' | tr -d '\t' | tr -d ' ')
+	unemprate=$(echo $scrape | grep -A 2 "Unemployment rate" |tail -n 1 | sed -e 's/<td>//g' | sed -e 's/<\/td>//g' | tr -d '\t')
+	numPersons=$(echo $scrape| grep -A 2 "Persons (no.)" |tail -n 1| sed -e 's/<td>//g' | sed -e 's/<\/td>//g' | tr -d '\t')
+	numBiz=$(echo $scrape| grep -A 2 "Total number of businesses (no.)" |tail -n 1| sed -e 's/<td>//g' | sed -e 's/<\/td>//g' | tr -d '\t')
+	income=$(echo $scrape| grep -A 2 "Median equivalised" |tail -n 1| sed -e 's/<td>//g' | sed -e 's/<\/td>//g' | tr -d '\t')
+	echo "${sa3id}|${name}|${numPersons}|${numBiz}|${income}|${unemprate}"
+done > absdata2.txt
+
+http://stat.abs.gov.au/itt/r.jsp?RegionSummary&region=10300&dataset=ABS_REGIONAL_LGA2017&maplayerid=LGA2017&geoconcept=LGA_2017&datasetASGS=ABS_REGIONAL_ASGS2016&datasetLGA=ABS_REGIONAL_LGA2017&regionLGA=LGA_2017&regionASGS=ASGS_2016
+
+for i in `cat sa3id.csv| awk -F, '{print $1}'`
+do
+	sa3id=$i
+	name=$(cat sa3id.csv | awk -F, '{print $2}')
+	url="http://stat.abs.gov.au/itt/r.jsp?RegionSummary&region=${sa3id}&dataset=ABS_REGIONAL_ASGS2016&geoconcept=ASGS_2016&measure=MEASURE&datasetASGS=ABS_REGIONAL_ASGS2016&datasetLGA=ABS_REGIONAL_LGA2017&regionLGA=LGA_2017&regionASGS=ASGS_2016"
+	scrape=$(curl $url)
+	numPersons=$(echo $scrape| grep -A 2 "Persons (no.)" |tail -n 1| sed -e 's/<td>//g' | sed -e 's/<\/td>//g' | tr -d '\t')
+	numBiz=$(echo $scrape| grep -A 2 "Total number of businesses (no.)" |tail -n 1| sed -e 's/<td>//g' | sed -e 's/<\/td>//g' | tr -d '\t')
+	income=$(echo $scrape| grep -A 2 "Median equivalised" |tail -n 1| sed -e 's/<td>//g' | sed -e 's/<\/td>//g' | tr -d '\t')
+	echo "${sa3id}|${name}|${numPersons}|${numBiz}|${income}|${unemprate}"
+done > absdata2.txt
+
+numPersons=$(echo $scraped| grep -A 2 "Persons \(no\.\)")
+
+echo $scraped| grep -A 2 "Persons (no.)" |tail -n 1| sed -e 's/<td>//g' | sed -e 's/<\/td>//g' | tr -d ' '
+
+echo $scraped| grep -A 2 "Median equivalised" |tail -n 1| sed -e 's/<td>//g' | sed -e 's/<\/td>//g' | tr -d '\t'
+
+val data = spark.read.option("header","true").csv("/tmp/abs1/").withColumnRenamed("Data item","DataItem").withColumnRenamed("Geography Level","GeographyLevel").withColumnRenamed("Flag Codes","FlagCodes").withColumnRenamed("ASGS_2016","SA3ID")
+
+scala> pop.show(3,false)
++--------+---------------------+----------+------------------------+---------+----------------+----------+----------+-----+-----+-----+---------+-----+
+|MEASURE |dataItem             |REGIONTYPE|geographyLevel          |ASGS_2016|Region          |FREQUENCY6|Frequency7|TIME8|Time9|Value|flagCodes|Flags|
++--------+---------------------+----------+------------------------+---------+----------------+----------+----------+-----+-----+-----+---------+-----+
+|ERP_P_20|Persons - Total (no.)|SA3       |Statistical Area Level 3|20501    |Baw Baw         |A         |Annual    |2016 |2016 |49157|null     |null |
+|ERP_P_20|Persons - Total (no.)|SA3       |Statistical Area Level 3|20501    |Baw Baw         |A         |Annual    |2017 |2017 |50505|null     |null |
+|ERP_P_20|Persons - Total (no.)|SA3       |Statistical Area Level 3|20502    |Gippsland - East|A         |Annual    |2016 |2016 |45537|null     |null |
++--------+---------------------+----------+------------------------+---------+----------------+----------+----------+-----+-----+-----+---------+-----+
+only showing top 3 rows
+
+scala> unemp.show(3,false)
++-------+---------------------+----------+------------------------+---------+--------------+----------+----------+-----+-----+-----+---------+-----+
+|MEASURE|dataItem             |REGIONTYPE|geographyLevel          |ASGS_2016|Region        |FREQUENCY6|Frequency7|TIME8|Time9|Value|flagCodes|Flags|
++-------+---------------------+----------+------------------------+---------+--------------+----------+----------+-----+-----+-----+---------+-----+
+|LF_4   |Unemployment rate (%)|SA3       |Statistical Area Level 3|10201    |Gosford       |A         |Annual    |2016 |2016 |6.2  |null     |null |
+|LF_4   |Unemployment rate (%)|SA3       |Statistical Area Level 3|10202    |Wyong         |A         |Annual    |2016 |2016 |7.4  |null     |null |
+|LF_4   |Unemployment rate (%)|SA3       |Statistical Area Level 3|11501    |Baulkham Hills|A         |Annual    |2016 |2016 |4.9  |null     |null |
++-------+---------------------+----------+------------------------+---------+--------------+----------+----------+-----+-----+-----+---------+-----+
+only showing top 3 rows
+
+
+scala> inc.show(3,false)
++-------+-------------------------------------------------------+----------+------------------------+---------+-------+----------+----------+-----+-----+-----+---------+-----+
+|MEASURE|dataItem                                               |REGIONTYPE|geographyLevel          |ASGS_2016|Region |FREQUENCY6|Frequency7|TIME8|Time9|Value|flagCodes|Flags|
++-------+-------------------------------------------------------+----------+------------------------+---------+-------+----------+----------+-----+-----+-----+---------+-----+
+|EQUIV_2|Median equivalised total household income (weekly)  ($)|SA3       |Statistical Area Level 3|10201    |Gosford|A         |Annual    |2011 |2011 |700  |null     |null |
+|EQUIV_2|Median equivalised total household income (weekly)  ($)|SA3       |Statistical Area Level 3|10201    |Gosford|A         |Annual    |2016 |2016 |822  |null     |null |
+|EQUIV_2|Median equivalised total household income (weekly)  ($)|SA3       |Statistical Area Level 3|10202    |Wyong  |A         |Annual    |2011 |2011 |601  |null     |null |
++-------+-------------------------------------------------------+----------+------------------------+---------+-------+----------+----------+-----+-----+-----+---------+-----+
+only showing top 3 rows
+
+scala> biz.show(3,false)
++-------+--------------------------------+----------+------------------------+---------+------------------+----------+----------+-----+-----+-----+---------+-----+
+|MEASURE|dataItem                        |REGIONTYPE|geographyLevel          |ASGS_2016|Region            |FREQUENCY6|Frequency7|TIME8|Time9|Value|flagCodes|Flags|
++-------+--------------------------------+----------+------------------------+---------+------------------+----------+----------+-----+-----+-----+---------+-----+
+|CABEE_5|Total number of businesses (no.)|SA3       |Statistical Area Level 3|20601    |Brunswick - Coburg|A         |Annual    |2016 |2016 |7084 |null     |null |
+|CABEE_5|Total number of businesses (no.)|SA3       |Statistical Area Level 3|20601    |Brunswick - Coburg|A         |Annual    |2017 |2017 |7399 |null     |null |
+|CABEE_5|Total number of businesses (no.)|SA3       |Statistical Area Level 3|30306    |Sunnybank         |A         |Annual    |2016 |2016 |4318 |null     |null |
++-------+--------------------------------+----------+------------------------+---------+------------------+----------+----------+-----+-----+-----+---------+-----+
+only showing top 3 rows
+
+
+val pop2016 = pop.filter("TIME8==2016").withColumnRenamed("Value","Population").select("ASGS_2016","Population")
+val unemp2016 = unemp.filter("TIME8==2016").withColumnRenamed("Value","UnemploymentRate").select("ASGS_2016","Region","UnemploymentRate")
+val biz2016= biz.filter("TIME8==2016").withColumnRenamed("Value","NumBusinesses").select("ASGS_2016","NumBusinesses")
+val inc2016=inc.filter("TIME8==2016").withColumnRenamed("Value","WeeklyIncome").select("ASGS_2016","WeeklyIncome")
+
+pop2016.join(unemp2016,Seq("ASGS_2016"),"outer").join(biz2016,Seq("ASGS_2016"),"outer").join(inc2016,Seq("ASGS_2016"),"outer").select("ASGS_2016","Region","Population","NumBusinesses","WeeklyIncome","UnemploymentRate").persist(StorageLevel.MEMORY_AND_DISK_SER).show(3,false)
+
+val inc = abs1.filter("MEASURE == 'EQUIV_2'").filter("REGIONTYPE == 'SA3'").select("ASGS_2016","TIME8","Value").withColumnRenamed("Value","WeeklyIncome").withColumnRenamed("TIME8","Year")
+
+inc.write.option("header","true").mode("Overwrite").csv("/tmp/abs2_output/inc")
+
+val biz = abs1.filter("MEASURE == 'CABEE_5'").filter("REGIONTYPE == 'SA3'").select("ASGS_2016","TIME8","Value").withColumnRenamed("Value","NumBusinesses").withColumnRenamed("TIME8","Year")
+
+biz.write.option("header","true").mode("Overwrite").csv("/tmp/abs2_output/biz")
+
+pop.join(unemp,Seq("ASGS_2016","Year")).join(biz,Seq("ASGS_2016","Year")).join(inc,Seq("ASGS_2016","Year")).select("ASGS_2016","Year","Population","NumBusinesses","WeeklyIncome","UnemploymentRate").persist(StorageLevel.MEMORY_AND_DISK_SER)
+--
+
+val data = spark.read.option("header","true").csv("/tmp/nc")
+val data1 = data.withColumnRenamed("Unique ID","id").withColumnRenamed("Calendar Year of Insolvency","year").withColumnRenamed("SA3 of Debtor","debtorSA3").withColumnRenamed("SA3 Code of Debtor","debtorSA3Code").withColumnRenamed("GCCSA of Debtor","debtorGccsa").withColumnRenamed("GCCSA Code of Debtor","debtorGccsaCode").withColumnRenamed("State of Debtor","debtorState").withColumnRenamed("Sex of Debtor","sex").withColumnRenamed("Family Situation","familySituation").withColumnRenamed("Debtor Occupation Code (ANZSCO)","occupationCode").withColumnRenamed("Debtor Occupation Name (ANZSCO)","occupationName").withColumnRenamed("Main Cause of Insolvency","cause").withColumnRenamed("Business Related Insolvency","businessRelated").withColumnRenamed("Debtor Income","income").withColumnRenamed("Primary Income Source","primaryIncomeSource").withColumnRenamed("Unsecured Debts","unsecuredDebts").withColumnRenamed("Value of Assets","valueOfAssets").withColumnRenamed("Type of Party","typeOfParty").withColumnRenamed("Non-Compliance Type","nonComplianceType").withColumnRenamed("Result of Non-Compliance","resultOfNonCompliance").withColumnRenamed("Number of Instances","numInstances").withColumnRenamed("Outcome of Non-Compliance","outcome").withColumnRenamed("Non-Compliance Conviction Result","result")
+
+data1.filter("numInstances is not null").select("debtorSA3","sex","familySituation","income","primaryIncomeSource","unsecuredDebts","valueOfAssets","typeOfParty","numInstances","outcome","result").show(3,false)
+
+val data = spark.read.option("header","true").csv("/tmp/nc").withColumnRenamed("Unique ID","id").withColumnRenamed("Calendar Year of Insolvency","year").withColumnRenamed("SA3 of Debtor","debtorSA3").withColumnRenamed("SA3 Code of Debtor","debtorSA3Code").withColumnRenamed("GCCSA of Debtor","debtorGccsa").withColumnRenamed("GCCSA Code of Debtor","debtorGccsaCode").withColumnRenamed("State of Debtor","debtorState").withColumnRenamed("Sex of Debtor","sex").withColumnRenamed("Family Situation","familySituation").withColumnRenamed("Debtor Occupation Code (ANZSCO)","occupationCode").withColumnRenamed("Debtor Occupation Name (ANZSCO)","occupationName").withColumnRenamed("Main Cause of Insolvency","cause").withColumnRenamed("Business Related Insolvency","businessRelated").withColumnRenamed("Debtor Income","income").withColumnRenamed("Primary Income Source","primaryIncomeSource").withColumnRenamed("Unsecured Debts","unsecuredDebts").withColumnRenamed("Value of Assets","valueOfAssets").withColumnRenamed("Type of Party","typeOfParty").withColumnRenamed("Non-Compliance Type","nonComplianceType").withColumnRenamed("Result of Non-Compliance","resultOfNonCompliance").withColumnRenamed("Number of Instances","numInstances").withColumnRenamed("Outcome of Non-Compliance","outcome").withColumnRenamed("Non-Compliance Conviction Result","result")
+
+import org.apache.spark.ml.Pipeline
+import org.apache.spark.ml.feature._
+
+val categoryColumns = Seq("income")
+val stages = Seq()
+val pipeline = new Pipeline().setStages(Array(
+new StringIndexer().setInputCol("income").setOutputCol("incomeIndex"),
+new OneHotEncoderEstimator().setInputCols(Array("incomeIndex")).setOutputCols(Array("incomeEncoded")),
+new StringIndexer().setInputCol("bankrupt").setOutputCol("label")
+))
+
+val label_bankrupt = new StringIndexer().setInputCol("bankrupt").setOutputCol("label")
+
+import static org.apache.spark.sql.functions.*
+scala> data.select("income").distinct().show
++-----------------+
+|           income|
++-----------------+
+|  $100000-$149999|
+|More Than $200000|
+|    $50000-$99999|
+| $-100000-$-50001|
+|        $0-$49999|
+|      $-50000-$-1|
+|  $150000-$199999|
++-----------------+
+import org.apache.spark.sql._
+val incomeEnc: Column = when(col("income").equalTo("$-100000-$-50001"),0).when(col("income").equalTo("$-50000-$-1"),1).when(col("income").equalTo("$0-$49999"),2).when(col("income").equalTo("$50000-$99999"),3).when(col("income").equalTo("$100000-$149999"),4).when(col("income").equalTo("$150000-$199999"),5).when(col("income").equalTo("More Than $200000"),6)
+val negScore : Column = when(col("numInstances").isNull,0).otherwise(col("numInstances").multiply(-1))
+ val beenBankrupt: Column = when(col("numInstances").isNull,0).when(col("numInstances").equalTo(0),0).otherwise(1)
+
+val incomeEnc: Column = when(col("income").equalTo("More than $200000"),"$200000").otherwise(col("income"))
+val debtEnc : Column = when(col("unsecuredDebts").equalTo("More Than $1000000"),"$1000000-$1100000").otherwise(col("unsecuredDebts"))
+
+val data_enc = data.withColumn("incomeEnc",incomeEnc).withColumn("instanceEnc",negScore).withColumn("bankrupt",beenBankrupt).withColumn("debtEnc",debtEnc)
+
+// val pipeline = new Pipeline().setStages(Array(
+// new StringIndexer().setInputCol("income").setOutputCol("incomeIndex"),
+// new OneHotEncoderEstimator().setInputCols(Array("incomeIndex")).setOutputCols(Array("incomeEncoded")),
+// new StringIndexer().setInputCol("bankrupt").setOutputCol("label")
+// ))
+
+val label_bankrupt = new StringIndexer().setInputCol("bankrupt").setOutputCol("label")
+val pipeline = new Pipeline().setStages(Array(
+new StringIndexer().setInputCol("debtEnc").setOutputCol("debts_indexed"),
+new VectorAssembler().setInputCols(Array("incomeEnc","instanceEnc","debts_indexed")).setOutputCol("feature"),
+new StringIndexer().setInputCol("bankrupt").setOutputCol("label")
+))
+
+val label_bankrupt = new StringIndexer().setInputCol("bankrupt").setOutputCol("label")
+val pipeline = new Pipeline().setStages(Array(
+new StringIndexer().setInputCol("debtEnc").setOutputCol("debts_indexed"),
+new StringIndexer().setInputCol("incomeEnc").setOutputCol("income_indexed"),
+new SQLTransformer()
+    .setStatement("SELECT *, income_indexed - debts_indexed as net_position FROM __THIS__"),
+new VectorAssembler().setInputCols(Array("net_position","instanceEnc","debts_indexed")).setOutputCol("feature"),
+new StringIndexer().setInputCol("bankrupt").setOutputCol("label")
+))
+
+// val pipeline = new Pipeline().setStages(Array(
+/ new VectorAssembler().setInputCols(Array("incomeEnc","instanceEnc")).setOutputCol("feature"),
+// new StringIndexer().setInputCol("bankrupt").setOutputCol("label")
+// ))
+val model = pipeline.fit(data_enc)
+val ds = model.transform(data_enc)
+// val ds_select = ds.select(data_enc.cols ++ "label" ++ "feature")
+// val ds_select = ds.select("income","label","feature")
+val ds_select = ds.select("income","numInstances","feature")
+val splitted = ds.randomSplit(Array(0.1,0.9),100)
+
+import org.apache.spark.ml.classification.DecisionTreeClassifier
+
+import org.apache.spark.ml.classification.LogisticRegression
+
+val lr = new LogisticRegression().setMaxIter(10).setFeaturesCol("feature")
+val lrModel = lr.fit(splitted(0))
+
+val predictions = lrModel.transform(splitted(1))
+
+val dt = new DecisionTreeClassifier().setFeaturesCol("feature")
+val dtModel = dt.fit(splitted(0))
+val dtPreds = dtModel.transform(splitted(1))
+evaluator.evaluate(dtPreds)
+
+val selected = predictions.select("incomeEnc", "prediction", "probability", "numInstances", "income","bankrupt")
+
+import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
+
+val evaluator = new BinaryClassificationEvaluator().setRawPredictionCol("rawPrediction")
+// default labelCol is label must be numeric
+evaluator.evaluate(predictions)
+// res50: Double = 1.0
